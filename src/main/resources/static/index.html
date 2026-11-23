@@ -1,0 +1,1202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FOOTBALLION | Daily Football Trivia</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #070b19;
+            --bg-card: rgba(16, 24, 48, 0.82);
+            --accent-green: #00e676;
+            --accent-blue: #00b0ff;
+            --accent-gold: #ffd700;
+            --accent-purple: #d500f9;
+            --accent-red: #ff3d57;
+            --text-main: #ffffff;
+            --text-muted: #8b9bb4;
+            --border-glass: rgba(255, 255, 255, 0.12);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        body {
+            background: radial-gradient(circle at top, #132247 0%, var(--bg-dark) 70%);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 24px 16px;
+            overflow-x: hidden;
+        }
+
+        /* Header & Scoreboard */
+        .header {
+            text-align: center;
+            margin-bottom: 24px;
+            width: 100%;
+            max-width: 560px;
+        }
+
+        .logo {
+            font-size: 2.4rem;
+            font-weight: 800;
+            letter-spacing: 2px;
+            background: linear-gradient(90deg, #ffffff, var(--accent-green));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .hud {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--bg-card);
+            border: 1px solid var(--border-glass);
+            backdrop-filter: blur(12px);
+            padding: 14px 22px;
+            border-radius: 16px;
+            margin-top: 18px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+        }
+
+        .hud-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .hud-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .hud-value {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: var(--accent-green);
+        }
+
+        .progress-dots {
+            display: flex;
+            gap: 8px;
+        }
+
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.15);
+            transition: all 0.3s ease;
+        }
+
+        .dot.active {
+            background: var(--accent-blue);
+            box-shadow: 0 0 10px var(--accent-blue);
+            transform: scale(1.2);
+        }
+
+        .dot.correct {
+            background: var(--accent-green);
+            box-shadow: 0 0 8px var(--accent-green);
+        }
+
+        .dot.wrong {
+            background: var(--accent-red);
+        }
+
+        /* Main Card Container */
+        .game-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-glass);
+            backdrop-filter: blur(16px);
+            width: 100%;
+            max-width: 560px;
+            border-radius: 22px;
+            padding: 28px 24px;
+            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+
+        /* Top Row: Badge + 45s Timer */
+        .card-top-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .question-badge {
+            display: inline-block;
+            background: rgba(0, 176, 255, 0.15);
+            color: var(--accent-blue);
+            font-size: 0.78rem;
+            font-weight: 700;
+            padding: 5px 12px;
+            border-radius: 20px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border: 1px solid rgba(0, 176, 255, 0.3);
+        }
+
+        .timer-pill {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255, 255, 255, 0.07);
+            border: 1px solid var(--border-glass);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-weight: 800;
+            font-size: 0.95rem;
+            color: var(--accent-green);
+            transition: all 0.25s ease;
+        }
+
+        .timer-pill.warning {
+            color: var(--accent-gold);
+            border-color: rgba(255, 215, 0, 0.4);
+        }
+
+        .timer-pill.danger {
+            color: var(--accent-red);
+            border-color: rgba(255, 61, 87, 0.5);
+            background: rgba(255, 61, 87, 0.15);
+            animation: pulseDanger 0.7s infinite alternate;
+        }
+
+        @keyframes pulseDanger {
+            from { transform: scale(1); }
+            to { transform: scale(1.06); }
+        }
+
+        .timer-bar-bg {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 99px;
+            overflow: hidden;
+            margin-bottom: 18px;
+        }
+
+        .timer-bar-fill {
+            height: 100%;
+            width: 100%;
+            background: var(--accent-green);
+            border-radius: 99px;
+            transition: width 1s linear, background-color 0.3s ease;
+        }
+
+        .question-text {
+            font-size: 1.45rem;
+            font-weight: 700;
+            line-height: 1.35;
+            margin-bottom: 20px;
+            color: #fff;
+        }
+
+        /* Wrong Try Feedback Banner */
+        .wrong-feedback {
+            display: none;
+            background: rgba(255, 61, 87, 0.16);
+            border: 1px solid rgba(255, 61, 87, 0.45);
+            color: #ff8a98;
+            padding: 10px 14px;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 14px;
+            text-align: center;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-7px); }
+            40%, 80% { transform: translateX(7px); }
+        }
+
+        .shake {
+            animation: shake 0.35s ease;
+        }
+
+        /* Search Input & Autocomplete */
+        .search-wrapper {
+            position: relative;
+            margin-bottom: 18px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 16px 18px;
+            border-radius: 14px;
+            border: 1px solid var(--border-glass);
+            background: rgba(7, 11, 25, 0.75);
+            color: #fff;
+            font-size: 1.05rem;
+            outline: none;
+            transition: border 0.25s, box-shadow 0.25s;
+        }
+
+        .search-input:focus {
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 15px rgba(0, 176, 255, 0.25);
+        }
+
+        .search-input.input-error {
+            border-color: var(--accent-red);
+            box-shadow: 0 0 15px rgba(255, 61, 87, 0.3);
+        }
+
+        .autocomplete-list {
+            position: absolute;
+            top: calc(100% + 6px);
+            left: 0;
+            right: 0;
+            background: #101935;
+            border: 1px solid var(--border-glass);
+            border-radius: 14px;
+            max-height: 230px;
+            overflow-y: auto;
+            z-index: 100;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.7);
+            display: none;
+        }
+
+        .autocomplete-item {
+            padding: 12px 16px;
+            cursor: pointer;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.15s;
+        }
+
+        .autocomplete-item:last-child {
+            border-bottom: none;
+        }
+
+        .autocomplete-item:hover {
+            background: rgba(0, 176, 255, 0.18);
+        }
+
+        .item-sub {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        /* Buttons */
+        .btn-group {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 15px 20px;
+            border: none;
+            border-radius: 14px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.15s, opacity 0.2s, box-shadow 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-green), #00b248);
+            color: #04120a;
+            box-shadow: 0 6px 20px rgba(0, 230, 118, 0.3);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-muted);
+            border: 1px solid var(--border-glass);
+            flex: 0.45;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.14);
+            color: #fff;
+        }
+
+        /* Result & Player Reveal Box */
+        .reveal-box {
+            display: none;
+            margin-top: 22px;
+            padding: 20px;
+            border-radius: 18px;
+            background: rgba(7, 11, 25, 0.7);
+            border: 1px solid var(--border-glass);
+            animation: fadeIn 0.35s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .player-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .player-img {
+            width: 68px;
+            height: 68px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid var(--accent-green);
+            background: #162244;
+            flex-shrink: 0;
+        }
+
+        .player-info {
+            flex: 1;
+        }
+
+        .player-name {
+            font-size: 1.25rem;
+            font-weight: 800;
+            margin-bottom: 4px;
+        }
+
+        .rarity-badge {
+            display: inline-block;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--accent-gold);
+        }
+
+        .crowd-stat {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 3px;
+        }
+
+        /* Rarity Meter Bar (1-100) */
+        .meter-container {
+            margin-top: 10px;
+        }
+
+        .meter-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .meter-bar-bg {
+            width: 100%;
+            height: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 99px;
+            overflow: hidden;
+        }
+
+        .meter-bar-fill {
+            height: 100%;
+            width: 0%;
+            border-radius: 99px;
+            transition: width 0.85s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        /* Summary Screen */
+        .summary-screen {
+            display: none;
+            text-align: center;
+        }
+
+        .total-score-circle {
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            border: 4px solid var(--accent-green);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            margin: 16px auto 20px;
+            background: radial-gradient(circle, rgba(0, 230, 118, 0.15) 0%, transparent 70%);
+            box-shadow: 0 0 30px rgba(0, 230, 118, 0.25);
+        }
+
+        .total-score-num {
+            font-size: 2.5rem;
+            font-weight: 800;
+            line-height: 1;
+        }
+
+        .total-score-max {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .percentile-banner {
+            background: linear-gradient(90deg, rgba(0, 176, 255, 0.15), rgba(0, 230, 118, 0.15));
+            border: 1px solid rgba(0, 230, 118, 0.35);
+            padding: 14px;
+            border-radius: 14px;
+            margin-bottom: 20px;
+            font-size: 1.05rem;
+            font-weight: 600;
+        }
+
+        .percentile-highlight {
+            color: var(--accent-green);
+            font-weight: 800;
+            font-size: 1.2rem;
+        }
+
+        /* Gaussian Bell Curve Card */
+        .bell-curve-card {
+            background:
+                repeating-linear-gradient(
+                    0deg,
+                    rgba(255, 255, 255, 0.015) 0px,
+                    rgba(255, 255, 255, 0.015) 1px,
+                    transparent 1px,
+                    transparent 3px
+                ),
+                linear-gradient(180deg, rgba(10, 18, 38, 0.92), rgba(7, 12, 26, 0.96));
+            border: 1px solid rgba(92, 225, 230, 0.28);
+            border-radius: 16px;
+            padding: 16px 14px 14px;
+            margin-bottom: 20px;
+            box-shadow: inset 0 0 28px rgba(0, 176, 255, 0.08), 0 8px 24px rgba(0, 0, 0, 0.35);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .bell-curve-svg {
+            width: 100%;
+            height: auto;
+            display: block;
+            overflow: visible;
+        }
+
+        .bell-curve-caption {
+            margin-top: 8px;
+            font-size: 0.92rem;
+            font-weight: 800;
+            letter-spacing: 1.4px;
+            text-transform: uppercase;
+            color: #5ce1e6;
+            text-shadow: 0 0 10px rgba(92, 225, 230, 0.45);
+        }
+
+        .bell-curve-subcaption {
+            margin-top: 4px;
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            letter-spacing: 0.4px;
+        }
+
+        .summary-list {
+            text-align: left;
+            margin-bottom: 22px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .summary-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(7, 11, 25, 0.65);
+            padding: 10px 14px;
+            border-radius: 12px;
+            border: 1px solid var(--border-glass);
+        }
+
+        .summary-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .summary-thumb {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            object-fit: cover;
+            background: #1b284d;
+        }
+
+        .summary-q-title {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .summary-ans-name {
+            font-size: 0.95rem;
+            font-weight: 700;
+        }
+
+        .summary-score-pill {
+            padding: 4px 10px;
+            border-radius: 99px;
+            font-weight: 800;
+            font-size: 0.85rem;
+            background: rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div class="logo">Footballion</div>
+        <div class="subtitle">Daily Ball Knowledge & Rarity Challenge</div>
+
+        <div class="hud">
+            <div class="hud-item">
+                <span class="hud-label">Question</span>
+                <span class="hud-value" id="q-counter">1 / 5</span>
+            </div>
+            <div class="progress-dots" id="progress-dots">
+                <div class="dot active"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+            </div>
+            <div class="hud-item">
+                <span class="hud-label">Rarity Score</span>
+                <span class="hud-value" id="total-score-hud">0</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="game-card">
+        <!-- Active Question Area -->
+        <div id="question-screen">
+            <div class="card-top-row">
+                <div class="question-badge" id="q-badge">DAILY CHALLENGE</div>
+                <div class="timer-pill" id="timer-pill">
+                    ⏱️ <span id="timer-text">45s</span>
+                </div>
+            </div>
+
+            <div class="timer-bar-bg">
+                <div class="timer-bar-fill" id="timer-bar"></div>
+            </div>
+
+            <div class="question-text" id="q-text">Loading today's football challenge...</div>
+
+            <!-- Feedback banner when player guesses wrong -->
+            <div class="wrong-feedback" id="wrong-feedback">
+                ❌ Wrong pick! Keep trying before time runs out!
+            </div>
+
+            <div class="search-wrapper" id="search-section">
+                <input type="text" id="answer-input" class="search-input" placeholder="Type player or club name..." autocomplete="off">
+                <div class="autocomplete-list" id="autocomplete-list"></div>
+            </div>
+
+            <div class="btn-group" id="action-buttons">
+                <button class="btn btn-primary" id="submit-btn" disabled>Lock In Answer ⚽</button>
+                <button class="btn btn-secondary" id="skip-btn">Give Up (0 pts)</button>
+            </div>
+
+            <!-- Reveal Card after correct answer / timeout / skip -->
+            <div class="reveal-box" id="reveal-box">
+                <div class="player-header">
+                    <img id="reveal-img" class="player-img" src="" alt="Player">
+                    <div class="player-info">
+                        <div class="player-name" id="reveal-name">Player Name</div>
+                        <div class="rarity-badge" id="reveal-label">🐐 GOAT Tier Pick!</div>
+                        <div class="crowd-stat" id="reveal-crowd">Picked by 4.2% of players today</div>
+                    </div>
+                </div>
+
+                <div class="meter-container">
+                    <div class="meter-header">
+                        <span>Rarity Meter</span>
+                        <span id="reveal-score-text">+88 pts</span>
+                    </div>
+                    <div class="meter-bar-bg">
+                        <div class="meter-bar-fill" id="reveal-bar"></div>
+                    </div>
+                </div>
+
+                <button class="btn btn-primary" id="next-btn" style="width: 100%; margin-top: 18px;">Next Question ➔</button>
+            </div>
+        </div>
+
+        <!-- Daily Summary Screen -->
+        <div class="summary-screen" id="summary-screen">
+            <div class="question-badge" style="margin-bottom: 12px;">FULL TIME — DAILY SUMMARY</div>
+            <h2>Your Daily Rarity Score</h2>
+
+            <div class="total-score-circle">
+                <span class="total-score-num" id="final-score-num">0</span>
+                <span class="total-score-max">OUT OF 500</span>
+            </div>
+
+            <div class="bell-curve-card" id="bell-curve-card">
+                <div id="bell-curve-container"></div>
+                <div class="bell-curve-caption" id="percentile-banner">
+                    CALCULATING YOUR GLOBAL RANK...
+                </div>
+                <div class="bell-curve-subcaption" id="average-score-banner"></div>
+            </div>
+
+            <div class="summary-list" id="summary-list"></div>
+
+            <button class="btn btn-primary" id="share-btn" style="width: 100%;">📋 Share Daily Score</button>
+        </div>
+    </div>
+
+    <script>
+        const QUESTION_TIME_LIMIT = 45;
+
+        let questions = [];
+        let currentIndex = 0;
+        let selectedEntityId = null;
+        let selectedEntityName = "";
+        let totalScore = 0;
+        let gameHistory = [];
+        let searchTimeout = null;
+
+        let timeLeft = QUESTION_TIME_LIMIT;
+        let timerInterval = null;
+
+        const qCounter = document.getElementById('q-counter');
+        const totalScoreHud = document.getElementById('total-score-hud');
+        const qBadge = document.getElementById('q-badge');
+        const qText = document.getElementById('q-text');
+        const answerInput = document.getElementById('answer-input');
+        const autocompleteList = document.getElementById('autocomplete-list');
+        const submitBtn = document.getElementById('submit-btn');
+        const skipBtn = document.getElementById('skip-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const revealBox = document.getElementById('reveal-box');
+        const actionButtons = document.getElementById('action-buttons');
+        const searchSection = document.getElementById('search-section');
+        const wrongFeedback = document.getElementById('wrong-feedback');
+        const timerText = document.getElementById('timer-text');
+        const timerPill = document.getElementById('timer-pill');
+        const timerBar = document.getElementById('timer-bar');
+
+        const FALLBACK_AVATAR = "https://ui-avatars.com/api/?background=162244&color=00e676&bold=true&name=";
+
+        // 1. Start Daily Game on Page Load
+        window.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const res = await fetch('/api/game/start');
+                questions = await res.json();
+                if (questions && questions.length > 0) {
+                    renderQuestion();
+                } else {
+                    qText.textContent = "No questions available. Check server logs.";
+                }
+            } catch (err) {
+                console.error("Failed to start game:", err);
+                qText.textContent = "Failed to connect to server.";
+            }
+        });
+
+        function renderQuestion() {
+            const q = questions[currentIndex];
+            qCounter.textContent = `${currentIndex + 1} / ${questions.length}`;
+            
+            const qType = q.type || q.strategyType || 'DAILY CHALLENGE';
+            const questionString = q.text || q.questionText || '';
+
+            qBadge.textContent = qType.replace(/_/g, ' ');
+            qText.textContent = questionString;
+
+            selectedEntityId = null;
+            selectedEntityName = "";
+            answerInput.value = "";
+            answerInput.disabled = false;
+            answerInput.classList.remove('input-error');
+            submitBtn.disabled = true;
+
+            wrongFeedback.style.display = 'none';
+            revealBox.style.display = 'none';
+            actionButtons.style.display = 'flex';
+            searchSection.style.display = 'block';
+
+            updateDots();
+            startTimer();
+            answerInput.focus();
+        }
+
+        function startTimer() {
+            stopTimer();
+            timeLeft = QUESTION_TIME_LIMIT;
+            updateTimerUI();
+
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                updateTimerUI();
+
+                if (timeLeft <= 0) {
+                    stopTimer();
+                    handleTimeOut();
+                }
+            }, 1000);
+        }
+
+        function stopTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+        }
+
+        function updateTimerUI() {
+            timerText.textContent = `${timeLeft}s`;
+            const percentage = (timeLeft / QUESTION_TIME_LIMIT) * 100;
+            timerBar.style.width = `${percentage}%`;
+
+            timerPill.classList.remove('warning', 'danger');
+            if (timeLeft <= 7) {
+                timerPill.classList.add('danger');
+                timerBar.style.backgroundColor = 'var(--accent-red)';
+            } else if (timeLeft <= 15) {
+                timerPill.classList.add('warning');
+                timerBar.style.backgroundColor = 'var(--accent-gold)';
+            } else {
+                timerBar.style.backgroundColor = 'var(--accent-green)';
+            }
+        }
+
+        function handleTimeOut() {
+            autocompleteList.style.display = 'none';
+            wrongFeedback.style.display = 'none';
+            showReveal({
+                correct: false,
+                rarityScore: 0,
+                rarityLabel: "⏰ Time's Up! (0 pts)",
+                entityName: "Out of Time",
+                imageUrl: null,
+                pickPercentage: 0
+            });
+        }
+
+        function updateDots() {
+            const dots = document.querySelectorAll('.dot');
+            dots.forEach((dot, idx) => {
+                dot.classList.remove('active');
+                if (idx === currentIndex) dot.classList.add('active');
+            });
+        }
+
+        // 2. Autocomplete Search (Connected to /api/search)
+        answerInput.addEventListener('input', () => {
+            const query = answerInput.value.trim();
+            selectedEntityId = null;
+            submitBtn.disabled = true;
+            answerInput.classList.remove('input-error');
+
+            if (searchTimeout) clearTimeout(searchTimeout);
+            if (query.length < 2) {
+                autocompleteList.style.display = 'none';
+                return;
+            }
+
+            searchTimeout = setTimeout(async () => {
+                const endpoint = `/api/search?query=${encodeURIComponent(query)}`;
+
+                try {
+                    const res = await fetch(endpoint);
+                    if (!res.ok) return;
+                    const results = await res.json();
+
+                    const currentQ = questions[currentIndex];
+                    const qType = currentQ.type || currentQ.strategyType || '';
+                    const isClubQuestion = qType === 'CLUB_IN_LEAGUE';
+
+                    const filteredResults = results.filter(item =>
+                        isClubQuestion ? item.type === "Club" : item.type === "Player"
+                    );
+
+                    renderAutocomplete(filteredResults);
+                } catch (e) {
+                    console.error("Autocomplete error:", e);
+                }
+            }, 200);
+        });
+
+        function renderAutocomplete(items) {
+            autocompleteList.innerHTML = '';
+            if (!items || items.length === 0) {
+                autocompleteList.style.display = 'none';
+                return;
+            }
+
+            items.slice(0, 8).forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'autocomplete-item';
+
+                div.innerHTML = `
+                    <span><strong>${item.name}</strong></span>
+                    <span class="item-sub">${item.type}</span>
+                `;
+                div.addEventListener('click', () => {
+                    selectedEntityId = item.id;
+                    selectedEntityName = item.name;
+                    answerInput.value = item.name;
+                    autocompleteList.style.display = 'none';
+                    submitBtn.disabled = false;
+                });
+                autocompleteList.appendChild(div);
+            });
+
+            autocompleteList.style.display = 'block';
+        }
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.search-wrapper')) {
+                autocompleteList.style.display = 'none';
+            }
+        });
+
+        // 3. Submit Answer
+        submitBtn.addEventListener('click', async () => {
+            if (!selectedEntityId || timeLeft <= 0) return;
+            submitBtn.disabled = true;
+            const currentQ = questions[currentIndex];
+            const qType = currentQ.type || currentQ.strategyType;
+            const attemptedName = selectedEntityName;
+
+            try {
+                const res = await fetch('/api/game/answer', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        strategyType: qType,
+                        guessedId: selectedEntityId,
+                        targetValue: currentQ.targetValue
+                    })
+                });
+                const data = await res.json();
+
+                if (data.correct) {
+                    // Correct answer! Stop clock and show rarity reveal
+                    stopTimer();
+                    wrongFeedback.style.display = 'none';
+                    showReveal(data);
+                } else {
+                    // Wrong answer! Keep timer running and let player guess again
+                    wrongFeedback.textContent = `❌ "${attemptedName}" is incorrect! Keep trying (${timeLeft}s left)`;
+                    wrongFeedback.style.display = 'block';
+                    
+                    answerInput.classList.add('input-error', 'shake');
+                    setTimeout(() => answerInput.classList.remove('shake'), 400);
+
+                    // Clear input for quick next try
+                    selectedEntityId = null;
+                    selectedEntityName = "";
+                    answerInput.value = "";
+                    answerInput.focus();
+                }
+            } catch (e) {
+                console.error("Error checking answer:", e);
+            }
+        });
+
+        // Give Up / Skip Question
+        skipBtn.addEventListener('click', () => {
+            stopTimer();
+            wrongFeedback.style.display = 'none';
+            showReveal({
+                correct: false,
+                rarityScore: 0,
+                rarityLabel: "⏭️ Question Skipped (0 pts)",
+                entityName: "Gave Up",
+                imageUrl: null,
+                pickPercentage: 0
+            });
+        });
+
+        function showReveal(data) {
+            actionButtons.style.display = 'none';
+            searchSection.style.display = 'none';
+            revealBox.style.display = 'block';
+
+            const dots = document.querySelectorAll('.dot');
+            dots[currentIndex].classList.remove('active');
+            dots[currentIndex].classList.add(data.correct ? 'correct' : 'wrong');
+
+            const displayName = data.entityName || selectedEntityName || "No Correct Pick";
+            const imgUrl = data.imageUrl ? data.imageUrl : (FALLBACK_AVATAR + encodeURIComponent(displayName));
+
+            const revealImg = document.getElementById('reveal-img');
+            revealImg.src = imgUrl;
+            revealImg.style.borderColor = data.correct ? 'var(--accent-green)' : 'var(--accent-red)';
+
+            document.getElementById('reveal-name').textContent = displayName;
+            document.getElementById('reveal-label').textContent = data.rarityLabel || (data.correct ? "⚽ Nice Pick!" : "❌ 0 Points");
+            document.getElementById('reveal-crowd').textContent = data.correct
+                ? `Picked by ${data.pickPercentage}% of players today`
+                : `You didn't find a valid answer in time`;
+
+            const score = data.correct ? data.rarityScore : 0;
+            totalScore += score;
+            totalScoreHud.textContent = totalScore;
+
+            document.getElementById('reveal-score-text').textContent = `+${score} pts`;
+
+            const bar = document.getElementById('reveal-bar');
+            bar.style.width = '0%';
+            bar.style.background = getBarGradient(score);
+            setTimeout(() => {
+                bar.style.width = `${score}%`;
+            }, 60);
+
+            const currentQ = questions[currentIndex];
+            const questionString = currentQ.text || currentQ.questionText || '';
+
+            gameHistory.push({
+                questionText: questionString,
+                name: displayName,
+                score: score,
+                correct: data.correct,
+                img: imgUrl
+            });
+
+            nextBtn.textContent = (currentIndex === questions.length - 1) ? "See Final Results 🏆" : "Next Question ➔";
+        }
+
+        function getBarGradient(score) {
+            if (score >= 100) return 'linear-gradient(90deg, #ffd700, #d500f9)';
+            if (score >= 85) return 'linear-gradient(90deg, #00e676, #00b0ff)';
+            if (score >= 60) return 'linear-gradient(90deg, #00b0ff, #2979ff)';
+            if (score >= 30) return 'linear-gradient(90deg, #26c6da, #00838f)';
+            return 'linear-gradient(90deg, #8b9bb4, #546e7a)';
+        }
+
+        // 4. Next Question or Finish Game
+        nextBtn.addEventListener('click', () => {
+            if (currentIndex < questions.length - 1) {
+                currentIndex++;
+                renderQuestion();
+            } else {
+                finishGame();
+            }
+        });
+
+        async function finishGame() {
+            stopTimer();
+            document.getElementById('question-screen').style.display = 'none';
+            const summaryScreen = document.getElementById('summary-screen');
+            summaryScreen.style.display = 'block';
+
+            document.getElementById('final-score-num').textContent = totalScore;
+
+            const listEl = document.getElementById('summary-list');
+            listEl.innerHTML = '';
+            gameHistory.forEach((item, i) => {
+                const row = document.createElement('div');
+                row.className = 'summary-row';
+                row.innerHTML = `
+                    <div class="summary-left">
+                        <img class="summary-thumb" src="${item.img}" alt="">
+                        <div>
+                            <div class="summary-q-title">Q${i + 1}: ${item.questionText}</div>
+                            <div class="summary-ans-name">${item.name}</div>
+                        </div>
+                    </div>
+                    <div class="summary-score-pill" style="color: ${item.correct ? 'var(--accent-green)' : 'var(--accent-red)'}">
+                        +${item.score}
+                    </div>
+                `;
+                listEl.appendChild(row);
+            });
+
+            try {
+                const res = await fetch('/api/game/finish', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ totalScore: totalScore })
+                });
+                const stats = await res.json();
+                const mean = stats.averageScore || 225;
+                const stdDev = stats.stdDev || 95;
+                const pct = stats.percentile !== undefined ? stats.percentile : 50;
+
+                renderBellCurve(totalScore, mean, stdDev);
+                document.getElementById('percentile-banner').textContent =
+                    `BETTER THAN ${pct}% OF TODAY'S PLAYERS`;
+                document.getElementById('average-score-banner').textContent =
+                    `Today's Global Average: ${mean} pts`;
+            } catch (e) {
+                renderBellCurve(totalScore, 225, 95);
+                document.getElementById('percentile-banner').textContent =
+                    "AWESOME GAME! SHARE YOUR SCORE WITH FRIENDS";
+                document.getElementById('average-score-banner').textContent = "";
+            }
+        }
+
+        function renderBellCurve(userScore, meanScore, stdDevScore) {
+            const container = document.getElementById('bell-curve-container');
+            if (!container) return;
+
+            const maxScore = 500;
+            const clampedScore = Math.max(0, Math.min(maxScore, userScore));
+            const mu = Math.max(150, Math.min(340, meanScore || 225));
+            const sigma = Math.max(70, Math.min(120, stdDevScore || 95));
+
+            const svgW = 540;
+            const svgH = 175;
+            const padLeft = 28;
+            const padRight = 28;
+            const plotW = svgW - padLeft - padRight;
+            const yTop = 20;
+            const yBase = 132;
+            const plotH = yBase - yTop;
+
+            const xForScore = (s) => padLeft + (s / maxScore) * plotW;
+            const gaussian = (s) => Math.exp(-0.5 * Math.pow((s - mu) / sigma, 2));
+            const yForScore = (s) => yBase - gaussian(s) * plotH;
+
+            // Build smooth path across 0..500
+            const step = 5;
+            let linePath = '';
+            for (let s = 0; s <= maxScore; s += step) {
+                const x = xForScore(s).toFixed(1);
+                const y = yForScore(s).toFixed(1);
+                linePath += (s === 0 ? `M ${x} ${y}` : ` L ${x} ${y}`);
+            }
+
+            const areaPath = `${linePath} L ${xForScore(maxScore).toFixed(1)} ${yBase} L ${xForScore(0).toFixed(1)} ${yBase} Z`;
+
+            const xYou = xForScore(clampedScore);
+            const yYou = yForScore(clampedScore);
+
+            // Axis ticks: 0, 100, 200, 300, 400, 500
+            const ticks = [0, 100, 200, 300, 400, 500];
+            let ticksMarkup = '';
+            for (const t of ticks) {
+                const tx = xForScore(t);
+                const isNearYou = Math.abs(tx - xYou) < 26;
+                ticksMarkup += `
+                    <line x1="${tx.toFixed(1)}" y1="${yBase}" x2="${tx.toFixed(1)}" y2="${yBase + 6}"
+                          stroke="rgba(139, 155, 180, 0.55)" stroke-width="1.5" />
+                `;
+                if (!isNearYou) {
+                    ticksMarkup += `
+                        <text x="${tx.toFixed(1)}" y="${yBase + 24}"
+                              text-anchor="middle"
+                              fill="#7c8da6"
+                              font-family="Outfit, monospace, sans-serif"
+                              font-size="12"
+                              font-weight="600">${t}</text>
+                    `;
+                }
+            }
+
+            container.innerHTML = `
+                <svg class="bell-curve-svg" viewBox="0 0 ${svgW} ${svgH}" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="bellAreaGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stop-color="#5ce1e6" stop-opacity="0.28" />
+                            <stop offset="100%" stop-color="#5ce1e6" stop-opacity="0.02" />
+                        </linearGradient>
+                        <filter id="cyanGlow" x="-20%" y="-20%" width="140%" height="140%">
+                            <feGaussianBlur stdDeviation="2.5" result="blur" />
+                            <feMerge>
+                                <feMergeNode in="blur" />
+                                <feMergeNode in="SourceGraphic" />
+                            </feMerge>
+                        </filter>
+                        <filter id="pinkGlow" x="-40%" y="-40%" width="180%" height="180%">
+                            <feGaussianBlur stdDeviation="3" result="blur" />
+                            <feMerge>
+                                <feMergeNode in="blur" />
+                                <feMergeNode in="SourceGraphic" />
+                            </feMerge>
+                        </filter>
+                    </defs>
+
+                    <!-- Area under Gaussian curve -->
+                    <path d="${areaPath}" fill="url(#bellAreaGrad)" />
+
+                    <!-- Baseline -->
+                    <line x1="${padLeft}" y1="${yBase}" x2="${svgW - padRight}" y2="${yBase}"
+                          stroke="rgba(139, 155, 180, 0.35)" stroke-width="1.5" />
+
+                    <!-- Gaussian curve stroke -->
+                    <path d="${linePath}" fill="none" stroke="#5ce1e6" stroke-width="3"
+                          stroke-linecap="round" filter="url(#cyanGlow)" />
+
+                    <!-- X-axis ticks & numbers -->
+                    ${ticksMarkup}
+
+                    <!-- YOU vertical pin & dot -->
+                    <line x1="${xYou.toFixed(1)}" y1="${yBase}" x2="${xYou.toFixed(1)}" y2="${yYou.toFixed(1)}"
+                          stroke="#ff4081" stroke-width="2.5" />
+                    <circle cx="${xYou.toFixed(1)}" cy="${yYou.toFixed(1)}" r="5.5"
+                            fill="#ff4081" filter="url(#pinkGlow)" />
+
+                    <!-- YOU label -->
+                    <text x="${xYou.toFixed(1)}" y="${yBase + 24}"
+                          text-anchor="middle"
+                          fill="#ff4081"
+                          font-family="Outfit, monospace, sans-serif"
+                          font-size="13"
+                          font-weight="800"
+                          letter-spacing="1">YOU</text>
+                </svg>
+            `;
+        }
+
+        // 5. Share Results to Clipboard (WhatsApp friendly)
+        document.getElementById('share-btn').addEventListener('click', () => {
+            const emojis = gameHistory.map(h => {
+                if (!h.correct) return '🟥';
+                if (h.score >= 100) return '💎';
+                if (h.score >= 85) return '🔥';
+                if (h.score >= 60) return '🟩';
+                if (h.score >= 30) return '🟦';
+                return '🟨';
+            }).join(' ');
+
+            const shareText = `⚽ FOOTBALLION Daily Challenge\n🏆 Score: ${totalScore}/500\n${emojis}\nCan you beat my Ball Knowledge?`;
+            navigator.clipboard.writeText(shareText);
+
+            const btn = document.getElementById('share-btn');
+            btn.textContent = "✅ Copied to Clipboard!";
+            setTimeout(() => btn.textContent = "📋 Share Daily Score", 2500);
+        });
+    </script>
+</body>
+</html>

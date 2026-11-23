@@ -1,0 +1,48 @@
+HELP.md
+target/
+.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### VS Code ###
+.vscode/
+
+### Runtime H2 Database ###
+/data/
+
+### Raw >100MB Transfermarkt CSVs (Pre-aggregated into aggregated_appearances.csv) ###
+src/main/resources/data/appearances.csv
+src/main/resources/data/game_events.csv
+src/main/resources/data/game_lineups.csv
+src/main/resources/data/player_valuations.csv
+src/main/resources/data/club_games.csv
+src/main/resources/data/games.csv
+src/main/resources/data/transfers.csv
+src/main/resources/data/competitions.csv
+src/main/resources/data/countries.csv
+src/main/resources/data/national_teams.csv
