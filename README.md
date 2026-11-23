@@ -1,5 +1,8 @@
 # ⚽ Footballion — Daily Football Trivia & Rarity Challenge
 
+🎮 **[Play Live Demo → footballion.onrender.com](https://footballion.onrender.com)**  
+*(Hosted on Render's free tier — please allow ~30 seconds to wake up on the first visit if the server was asleep.)*
+
 **Footballion** is a daily football trivia web application built with **Java 21** and **Spring Boot**. Unlike traditional trivia games where every right answer is equal, Footballion rewards **deep football knowledge ("Ball Knowledge")**: players have **45 seconds** per question to come up with the **rarest valid answer** they can think of across a database of **50,000+ players**, **790+ clubs**, and **1.7M+ historical match records**.
 
 ---
