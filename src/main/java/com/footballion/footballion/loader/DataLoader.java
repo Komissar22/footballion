@@ -11,11 +11,13 @@ import com.opencsv.CSVReader;
 import com.opencsv.CSVReaderBuilder;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
+import java.sql.Types;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -27,22 +29,34 @@ public class DataLoader implements CommandLineRunner {
     private final PlayerRepository playerRepository;
     private final ClubRepository clubRepository;
     private final AppearanceRepository appearanceRepository;
+    private final JdbcTemplate jdbcTemplate;
+
+    private volatile boolean dataReady = false;
 
     public DataLoader(PlayerRepository playerRepository,
                       ClubRepository clubRepository,
-                      AppearanceRepository appearanceRepository) {
+                      AppearanceRepository appearanceRepository,
+                      JdbcTemplate jdbcTemplate) {
         this.playerRepository = playerRepository;
         this.clubRepository = clubRepository;
         this.appearanceRepository = appearanceRepository;
+        this.jdbcTemplate = jdbcTemplate;
+    }
+
+    public boolean isDataReady() {
+        return dataReady;
     }
 
     @Override
     public void run(String... args) throws Exception {
+        long start = System.currentTimeMillis();
         loadClubs();
         loadPlayers();
         loadAppearancesAndTransfers();
+        this.dataReady = true;
+        long elapsedMs = System.currentTimeMillis() - start;
         System.out.println("=================================================");
-        System.out.println("⚽ ALL DATA LOADED SUCCESSFULLY! READY TO PLAY! ⚽");
+        System.out.println("⚽ ALL DATA LOADED IN " + elapsedMs + "ms! READY TO PLAY! ⚽");
         System.out.println("Open your browser at: http://localhost:8080");
         System.out.println("=================================================");
     }
@@ -56,6 +70,7 @@ public class DataLoader implements CommandLineRunner {
                 return;
             }
             System.out.println("Updating clubs table with accent-normalized search names...");
+            clubRepository.deleteAllInBatch();
         }
 
         try (Reader reader = new InputStreamReader(
@@ -63,7 +78,7 @@ public class DataLoader implements CommandLineRunner {
              CSVReader csvReader = new CSVReaderBuilder(reader).withSkipLines(1).build()) {
 
             String[] line;
-            List<Club> clubs = new ArrayList<>();
+            List<Club> clubs = new ArrayList<>(1000);
 
             while ((line = csvReader.readNext()) != null) {
                 if (line.length < 4 || line[0].isBlank()) {
@@ -80,7 +95,17 @@ public class DataLoader implements CommandLineRunner {
                 }
             }
 
-            clubRepository.saveAll(clubs);
+            jdbcTemplate.batchUpdate(
+                    "INSERT INTO clubs (club_id, name, search_name, domestic_competition_id) VALUES (?, ?, ?, ?)",
+                    clubs,
+                    500,
+                    (ps, c) -> {
+                        ps.setInt(1, c.getClubId());
+                        ps.setString(2, c.getName());
+                        ps.setString(3, c.getSearchName());
+                        ps.setString(4, c.getDomesticCompetitionId());
+                    }
+            );
             System.out.println("Loaded " + clubs.size() + " clubs into database.");
 
         } catch (Exception e) {
@@ -98,6 +123,7 @@ public class DataLoader implements CommandLineRunner {
                 return;
             }
             System.out.println("Updating players table with market value and accent-normalized search names...");
+            playerRepository.deleteAllInBatch();
         }
 
         try (Reader reader = new InputStreamReader(
@@ -105,7 +131,7 @@ public class DataLoader implements CommandLineRunner {
              CSVReader csvReader = new CSVReaderBuilder(reader).withSkipLines(1).build()) {
 
             String[] line;
-            List<Player> players = new ArrayList<>();
+            List<Player> players = new ArrayList<>(52000);
 
             while ((line = csvReader.readNext()) != null) {
                 if (line.length < 6 || line[0].isBlank()) {
@@ -113,36 +139,20 @@ public class DataLoader implements CommandLineRunner {
                 }
 
                 try {
-                    // 0: player_id
                     Integer playerId = Integer.parseInt(line[0].trim());
-
-                    // 3: name
                     String name = line.length > 3 && !line[3].isBlank() ? line[3].trim() : "Unknown";
-
-                    // 4: last_season
                     Integer lastSeason = parseIntSafe(line, 4, 2020);
-
-                    // 5: current_club_id
                     Integer currentClubId = parseIntSafe(line, 5, null);
 
-                    // 9: country_of_citizenship
                     String country = line.length > 9 && !line[9].isBlank() ? line[9].trim() :
                                     (line.length > 7 && !line[7].isBlank() ? line[7].trim() : "Unknown");
 
-                    // 12: position
                     String position = line.length > 12 && !line[12].isBlank() ? line[12].trim() :
                                      (line.length > 11 && !line[11].isBlank() ? line[11].trim() : "Unknown");
 
-                    // 17: image_url
                     String imageUrl = line.length > 17 && !line[17].isBlank() ? line[17].trim() : null;
-
-                    // 18: international_caps
                     Integer internationalCaps = parseIntSafe(line, 18, 0);
-
-                    // 24: market_value_in_eur
                     Long marketValue = parseLongSafe(line, 24, 0L);
-
-                    // 25: highest_market_value
                     Long highestMarketValue = parseLongSafe(line, 25, marketValue);
 
                     players.add(new Player(
@@ -153,7 +163,30 @@ public class DataLoader implements CommandLineRunner {
                 }
             }
 
-            playerRepository.saveAll(players);
+            jdbcTemplate.batchUpdate(
+                    "INSERT INTO players (player_id, name, search_name, current_club_id, country_of_citizenship, " +
+                    "position, last_season, image_url, international_caps, market_value_in_eur, highest_market_value_in_eur) " +
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    players,
+                    2000,
+                    (ps, p) -> {
+                        ps.setInt(1, p.getPlayerId());
+                        ps.setString(2, p.getName());
+                        ps.setString(3, p.getSearchName());
+                        if (p.getCurrentClubId() != null) {
+                            ps.setInt(4, p.getCurrentClubId());
+                        } else {
+                            ps.setNull(4, Types.INTEGER);
+                        }
+                        ps.setString(5, p.getCountryOfCitizenship());
+                        ps.setString(6, p.getPosition());
+                        ps.setInt(7, p.getLastSeason() != null ? p.getLastSeason() : 2020);
+                        ps.setString(8, p.getImageUrl());
+                        ps.setInt(9, p.getInternationalCaps() != null ? p.getInternationalCaps() : 0);
+                        ps.setLong(10, p.getMarketValueInEur() != null ? p.getMarketValueInEur() : 0L);
+                        ps.setLong(11, p.getHighestMarketValueInEur() != null ? p.getHighestMarketValueInEur() : 0L);
+                    }
+            );
             System.out.println("Loaded " + players.size() + " players into database.");
 
         } catch (Exception e) {
@@ -168,7 +201,7 @@ public class DataLoader implements CommandLineRunner {
             return;
         }
 
-        System.out.println("Aggregating appearances.csv, games.csv, game_events.csv & transfers.csv for question strategies...");
+        System.out.println("Loading appearances & transfers for question strategies...");
         appearanceRepository.deleteAllInBatch();
 
         // Fast path: load pre-aggregated compact CSV if available on classpath
@@ -192,10 +225,7 @@ public class DataLoader implements CommandLineRunner {
                         preloaded.add(new Appearance(appId, playerId, clubId, gameId, compId, appCount, goals, assists));
                     }
                 }
-                int batchSize = 2000;
-                for (int i = 0; i < preloaded.size(); i += batchSize) {
-                    appearanceRepository.saveAll(preloaded.subList(i, Math.min(i + batchSize, preloaded.size())));
-                }
+                batchInsertAppearances(preloaded);
                 System.out.println("Loaded " + preloaded.size() + " pre-aggregated appearance & transfer records from aggregated_appearances.csv.");
                 return;
             } catch (Exception e) {
@@ -211,6 +241,7 @@ public class DataLoader implements CommandLineRunner {
         Map<String, Appearance> aggregated = new HashMap<>(65536);
         Set<Integer> tournamentGamesInAppearances = new HashSet<>();
 
+        // 1. Stream and aggregate appearances.csv
         try (Reader reader = new InputStreamReader(
                 new ClassPathResource("data/appearances.csv").getInputStream(), StandardCharsets.UTF_8);
              CSVReader csvReader = new CSVReaderBuilder(reader).withSkipLines(1).build()) {
@@ -277,6 +308,7 @@ public class DataLoader implements CommandLineRunner {
             System.err.println("Failed to process appearances.csv: " + e.getMessage());
         }
 
+        // 1b. Supplement historical tournament goals & assists (FIWC, EURO, CL) from games.csv + game_events.csv
         Map<Integer, String> tournamentGameToCompetition = new HashMap<>();
         try (Reader reader = new InputStreamReader(
                 new ClassPathResource("data/games.csv").getInputStream(), StandardCharsets.UTF_8);
@@ -346,6 +378,7 @@ public class DataLoader implements CommandLineRunner {
             }
         }
 
+        // 2. Stream transfers.csv for direct transfers between Top 5 European clubs
         try (Reader reader = new InputStreamReader(
                 new ClassPathResource("data/transfers.csv").getInputStream(), StandardCharsets.UTF_8);
              CSVReader csvReader = new CSVReaderBuilder(reader).withSkipLines(1).build()) {
@@ -394,14 +427,28 @@ public class DataLoader implements CommandLineRunner {
                 })
                 .toList();
 
-        int batchSize = 2000;
-        for (int i = 0; i < toSave.size(); i += batchSize) {
-            int end = Math.min(i + batchSize, toSave.size());
-            appearanceRepository.saveAll(toSave.subList(i, end));
-        }
-
+        batchInsertAppearances(toSave);
         exportAggregatedCsvIfMissing(toSave);
         System.out.println("Loaded " + toSave.size() + " aggregated appearance & transfer records into database.");
+    }
+
+    private void batchInsertAppearances(List<Appearance> records) {
+        jdbcTemplate.batchUpdate(
+                "INSERT INTO appearances (appearance_id, player_id, player_club_id, game_id, competition_id, appearances_count, goals, assists) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                records,
+                2000,
+                (ps, a) -> {
+                    ps.setString(1, a.getAppearanceId());
+                    ps.setInt(2, a.getPlayerId() != null ? a.getPlayerId() : 0);
+                    ps.setInt(3, a.getPlayerClubId() != null ? a.getPlayerClubId() : 0);
+                    ps.setInt(4, a.getGameId() != null ? a.getGameId() : 0);
+                    ps.setString(5, a.getCompetitionId());
+                    ps.setInt(6, a.getAppearancesCount() != null ? a.getAppearancesCount() : 1);
+                    ps.setInt(7, a.getGoals() != null ? a.getGoals() : 0);
+                    ps.setInt(8, a.getAssists() != null ? a.getAssists() : 0);
+                }
+        );
     }
 
     private void exportAggregatedCsvIfMissing(List<Appearance> records) {

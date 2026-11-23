@@ -715,21 +715,26 @@
 
         const FALLBACK_AVATAR = "https://ui-avatars.com/api/?background=162244&color=00e676&bold=true&name=";
 
-        // 1. Start Daily Game on Page Load
-        window.addEventListener('DOMContentLoaded', async () => {
+        // 1. Start Daily Game on Page Load (with automatic warm-up retry during cold start)
+        async function loadDailyGame() {
             try {
                 const res = await fetch('/api/game/start');
                 questions = await res.json();
                 if (questions && questions.length > 0) {
                     renderQuestion();
                 } else {
-                    qText.textContent = "No questions available. Check server logs.";
+                    qText.textContent = "⚽ Warming up database (50,000+ players)... Starting in a few seconds!";
+                    answerInput.disabled = true;
+                    setTimeout(loadDailyGame, 2000);
                 }
             } catch (err) {
-                console.error("Failed to start game:", err);
-                qText.textContent = "Failed to connect to server.";
+                console.error("Waiting for server:", err);
+                qText.textContent = "⚽ Connecting to server... Starting in a few seconds!";
+                setTimeout(loadDailyGame, 2500);
             }
-        });
+        }
+
+        window.addEventListener('DOMContentLoaded', loadDailyGame);
 
         function renderQuestion() {
             const q = questions[currentIndex];

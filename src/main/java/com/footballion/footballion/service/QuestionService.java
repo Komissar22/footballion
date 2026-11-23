@@ -2,6 +2,7 @@ package com.footballion.footballion.service;
 
 import com.footballion.footballion.dto.AnswerResponseDto;
 import com.footballion.footballion.dto.QuestionDto;
+import com.footballion.footballion.loader.DataLoader;
 import com.footballion.footballion.repository.AppearanceRepository;
 import com.footballion.footballion.repository.ClubRepository;
 import com.footballion.footballion.repository.PlayerRepository;
@@ -19,25 +20,32 @@ public class QuestionService {
     private final ClubRepository clubRepo;
     private final AppearanceRepository appearanceRepo;
     private final RarityAndStatsService rarityService;
+    private final DataLoader dataLoader;
 
-    // saving today's questions
+    // שמירת השאלות של היום כדי שכל השחקנים ישחקו את אותו משחק יומי בדיוק
     private LocalDate cachedDate = null;
     private List<QuestionDto> cachedDailyQuestions = new ArrayList<>();
 
     public QuestionService(List<QuestionStrategy> strategies, PlayerRepository playerRepo,
                            ClubRepository clubRepo, AppearanceRepository appearanceRepo,
-                           RarityAndStatsService rarityService) {
+                           RarityAndStatsService rarityService, DataLoader dataLoader) {
         this.strategies = strategies;
         this.playerRepo = playerRepo;
         this.clubRepo = clubRepo;
         this.appearanceRepo = appearanceRepo;
         this.rarityService = rarityService;
+        this.dataLoader = dataLoader;
     }
 
     public synchronized List<QuestionDto> getDailyGameQuestions() {
+        // אם מסד הנתונים עדיין בטעינה ראשונית (Cold Start ב-Render), נחכה עד שכל הטבלאות מוכנות
+        if (!dataLoader.isDataReady()) {
+            return Collections.emptyList();
+        }
+
         LocalDate today = LocalDate.now();
 
-        if (today.equals(cachedDate) && !cachedDailyQuestions.isEmpty()) {
+        if (today.equals(cachedDate) && cachedDailyQuestions.size() == 5) {
             return cachedDailyQuestions;
         }
 
@@ -49,6 +57,7 @@ public class QuestionService {
         List<QuestionStrategy> sortedStrategies = new ArrayList<>(strategies);
         sortedStrategies.sort(Comparator.comparing(QuestionStrategy::getType));
 
+        // ערבוב מבוסס על התאריך של היום (Seed יומי)
         Random dailyRandom = new Random(today.toEpochDay());
         Collections.shuffle(sortedStrategies, dailyRandom);
 
@@ -64,9 +73,11 @@ public class QuestionService {
             }
         }
 
-        this.cachedDate = today;
-        this.cachedDailyQuestions = gameQuestions;
-        return cachedDailyQuestions;
+        if (gameQuestions.size() == targetQuestions) {
+            this.cachedDate = today;
+            this.cachedDailyQuestions = gameQuestions;
+        }
+        return gameQuestions;
     }
 
     public AnswerResponseDto checkAndScoreAnswer(String strategyType, Integer guessedId, String targetValue) {
